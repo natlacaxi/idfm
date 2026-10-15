@@ -1,0 +1,41 @@
+name: Données trains IDF
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Tout reconstruire maintenant"
+        type: boolean
+        default: false
+permissions:
+  contents: write
+concurrency:
+  group: donnees
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy scipy
+      - id: m
+        run: echo "v=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: cache
+          key: osm-rail-${{ steps.m.outputs.v }}
+      - name: Génération des données
+        env:
+          PRIM_API_KEY: ${{ secrets.PRIM_API_KEY }}
+        run: python build_data.py --auto ${{ inputs.full && '--force' || '' }}
+      - name: Publication
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          git add data
+          git commit -m "données $(date -u +%FT%TZ)" || echo "rien de neuf"
+          git push
