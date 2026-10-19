@@ -1,6 +1,7 @@
-const V='trains-idf-v1',SHELL=['./','index.html','manifest.webmanifest','icons/icon-192.png','icons/icon-512.png','icons/favicon-64.png'];
+const V='trains-idf-v3',SHELL=['./','index.html','manifest.webmanifest','config.js','icons/icon-192.png','icons/icon-512.png','icons/favicon-64.png'];
 const keep=(req,r)=>{if(r.ok){const c=r.clone();caches.open(V).then(x=>x.put(req,c))}return r};
-self.addEventListener('install',e=>e.waitUntil(caches.open(V).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
+// un fichier manquant ne doit jamais empêcher l'installation : on ajoute chaque fichier séparément
+self.addEventListener('install',e=>e.waitUntil(caches.open(V).then(c=>Promise.allSettled(SHELL.map(u=>c.add(u)))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
   const q=e.request,u=new URL(q.url);if(q.method!=='GET')return;
